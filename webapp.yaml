@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp-deployment
+  labels:
+    app: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - name: webapp
+        # Here we define the image to be used
+        # It's a Node application which listens on port 3000
+        image: nanajanashia/k8s-demo-app:v1.0
+        ports:
+        - containerPort: 3000
+        # Here we define the envionment variables for the container
+        env:
+        # Here we have some variables defined in the Node application
+        - name: USER_NAME
+          valueFrom:
+            # Here, we reference a value from the Secret configuration file
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-user
+        - name: USER_PWD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-password
+        - name: DB_URL
+          valueFrom:
+            # Here, we reference a value from the ConfigMap configuration file
+            configMapKeyRef:
+              name: mongo-config
+              key: mongo-url
+---
+# Here we define the Service configuration
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapp-service
+spec:
+  # The defulat type is ClusterIP, for internal Services
+  type: NodePort
+  selector:
+    app: webapp
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+      # Exposes the Service on each Node's IP at a static port (for External Services)
+      # Accessible on <NodeIP>:<NodePort>
+      nodePort: 30100 # Must be within the range 30000-32767)

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+# In the main part, we have the Blueprint for the Pods
+metadata:
+  name: mongo-deployment
+  labels:
+    app: mongo
+spec:
+  # Here we define how many Pods we want to create
+  # We set as 1, since we're dealing with databases in this context (we would use StatefulSet to scale it)
+  replicas: 1
+  # Here, we identify the set of resources which belong to deployment by the label
+  selector:
+    matchLabels:
+      app: mongo
+  # Here we have the configuration for the Pod
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+      - name: mongodb
+        # Here we define the image to be used
+        image: mongo:5.0
+        ports:
+        - containerPort: 27017
+        # Here we define the environment variables for the container
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            # Here, we reference a value from the Secret configuration file
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-user
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: mongo-password
+---
+# Here we define the Service configuration
+apiVersion: v1
+kind: Service
+metadata:
+  # Here we define the endpint to access the service (similar to a fixed IP)
+  name: mongo-service
+spec:
+  # Here we select the Pods to which we should forward the requests
+  selector:
+    app: mongo
+  ports:
+    - protocol: TCP
+      port: 27017 # Here we have the Service port
+      targetPort: 27017 # Here we have the containerPort of Deployment
